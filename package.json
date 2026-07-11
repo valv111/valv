@@ -1,11 +1,11 @@
 {
   "name": "clipbridge",
-  "version": "1.0.0",
-  "description": "iOS 与 PC 之间跨设备剪贴板同步工具",
+  "version": "1.1.0",
+  "description": "局域网共享剪贴板，打开同一地址即可实时同步文本",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
+    "test": "node test/smoke.test.js",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f"
