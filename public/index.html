@@ -419,7 +419,7 @@
   </style>
 </head>
 <body>
-  <div class="app" id="app" hidden>
+  <div class="app" id="app">
     <header>
       <div class="logo">
         <div class="logo-icon">📋</div>
@@ -433,6 +433,7 @@
         <div class="badge" id="peerBadge" hidden>
           <span id="peerText">1 台设备</span>
         </div>
+        <div class="badge" id="versionBadge" style="font-size:0.72rem;color:var(--muted);">v1.0.3</div>
       </div>
     </header>
 
@@ -448,10 +449,11 @@
             <button class="btn-primary" id="createRoomBtn">创建</button>
             <button class="btn-secondary" id="joinBtn">加入</button>
           </div>
-          <div class="pin-row">
-            <input id="pinInput" placeholder="房间密码（可选，首次创建时可设置）" maxlength="16" type="password" autocomplete="off">
+          <div class="pin-row" id="pinRow" hidden>
+            <input id="pinInput" placeholder="房间密码" maxlength="16" type="password" autocomplete="off">
             <button class="btn-ghost" id="togglePinBtn" type="button">显示</button>
           </div>
+          <button class="btn-ghost" id="showPinBtn" type="button" style="margin-bottom:12px;">设置房间密码（可选）</button>
           <p class="deploy-hint desktop-only">
             部署方式：软路由 / PC 常驻运行均可。Docker：<code>docker compose up -d</code> · 进程：<code>./start.sh</code>
           </p>
@@ -535,6 +537,7 @@
         <button class="btn-primary" id="gateJoinBtn">进入</button>
       </div>
       <p class="error-text" id="gateError"></p>
+      <button class="btn-secondary" id="gateHomeBtn" type="button" style="width:100%;margin-top:12px;">返回首页</button>
     </div>
   </div>
 
@@ -556,7 +559,6 @@
     }
 
     const urlRoom = params.get('room');
-    const lastRoom = LS.get('clipbridge_room', '');
 
     // 仅扫码/链接带 ?room= 时自动加入；直接打开首页不自动连上次房间
     let room = urlRoom || '';
@@ -588,8 +590,8 @@
     let setPinOnJoin = false;
     let haltReconnect = false;
 
-    $('roomInput').value = room || lastRoom;
-    $('pinInput').value = pin || (lastRoom ? getPinForRoom(lastRoom) : '');
+    $('roomInput').value = room || '';
+    $('pinInput').value = pin || '';
     $('autoCopy').checked = LS.get('clipbridge_autoCopy', true);
     $('autoPaste').checked = LS.get('clipbridge_autoPaste', false);
 
@@ -639,6 +641,23 @@
       savePinForRoom(room, pin);
       LS.set('clipbridge_autoCopy', $('autoCopy').checked);
       LS.set('clipbridge_autoPaste', $('autoPaste').checked);
+    }
+
+    function goHome() {
+      room = '';
+      pin = '';
+      haltReconnect = true;
+      closeWs(true);
+      clearTimeout(reconnectTimer);
+      history.replaceState(null, '', location.pathname);
+      $('roomInput').value = '';
+      $('pinInput').value = '';
+      $('pinRow').hidden = true;
+      $('showPinBtn').hidden = false;
+      showApp();
+      loadQr();
+      loadRoomList();
+      setStatus('', '请选择或创建房间');
     }
 
     function showApp() {
@@ -885,9 +904,18 @@
 
     function bindRoomListClicks(container) {
       container.querySelectorAll('.room-item').forEach((el) => {
-        el.addEventListener('click', () => {
+        el.addEventListener('click', async () => {
           const id = el.dataset.room;
           $('roomInput').value = id;
+          try {
+            const meta = await fetch(`/api/room/${encodeURIComponent(id)}/meta`).then((r) => r.json());
+            if (meta.hasPin && !getPinForRoom(id)) {
+              room = id;
+              pin = '';
+              showPinGate('该房间已设置密码，请输入');
+              return;
+            }
+          } catch { /* continue */ }
           applyRoom(id, getPinForRoom(id), false);
         });
       });
@@ -934,14 +962,23 @@
 
     $('createRoomBtn').addEventListener('click', createRoom);
 
-    $('joinBtn').addEventListener('click', () => {
+    $('joinBtn').addEventListener('click', async () => {
       const newRoom = $('roomInput').value.trim();
       if (!newRoom) {
         toast('请输入房间号或先创建房间');
         return;
       }
       const newPin = $('pinInput').value.trim();
-      applyRoom(newRoom, newPin, Boolean(newPin));
+      try {
+        const meta = await fetch(`/api/room/${encodeURIComponent(newRoom)}/meta`).then((r) => r.json());
+        if (meta.hasPin && !newPin) {
+          room = newRoom;
+          pin = '';
+          showPinGate('该房间已设置密码，请输入');
+          return;
+        }
+      } catch { /* continue */ }
+      applyRoom(newRoom, newPin, Boolean(newPin) && !$('pinRow').hidden);
     });
 
     $('gateJoinBtn').addEventListener('click', () => {
@@ -951,10 +988,20 @@
         return;
       }
       $('pinInput').value = pin;
+      $('pinRow').hidden = false;
+      $('showPinBtn').hidden = true;
       persistPrefs();
       haltReconnect = false;
       reconnectAttempt = 0;
       connect();
+    });
+
+    $('gateHomeBtn').addEventListener('click', goHome);
+
+    $('showPinBtn').addEventListener('click', () => {
+      $('pinRow').hidden = false;
+      $('showPinBtn').hidden = true;
+      $('pinInput').focus();
     });
 
     $('gatePinInput').addEventListener('keydown', (e) => {
@@ -1046,7 +1093,7 @@
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        if (!haltReconnect && (!ws || ws.readyState !== WebSocket.OPEN)) connect();
+        if (room && !haltReconnect && (!ws || ws.readyState !== WebSocket.OPEN)) connect();
         if ($('autoPaste')?.checked) pasteFromLocal(true);
       }
     });
@@ -1061,6 +1108,7 @@
       setInterval(loadRoomList, 5000);
 
       if (!urlRoom) {
+        $('pinGate').hidden = true;
         showApp();
         loadQr();
         setStatus('', '请选择或创建房间');

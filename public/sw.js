@@ -1,18 +1,15 @@
-const CACHE = 'clipbridge-v5';
-const ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
+const CACHE = 'clipbridge-v6';
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+      Promise.all(keys.map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
@@ -22,13 +19,14 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/api/') || url.protocol === 'ws:' || url.protocol === 'wss:') {
     return;
   }
+  // HTML 始终走网络，避免缓存旧页面导致密码页问题
+  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
   e.respondWith(
-    caches.match(request).then((cached) =>
-      cached || fetch(request).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(request, copy));
-        return res;
-      })
-    )
+    fetch(request).then((res) => res).catch(() => caches.match(request))
   );
 });
