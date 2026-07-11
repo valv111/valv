@@ -131,6 +131,39 @@ docker run -d \
 
 访问地址：`http://<主机IP>:3456`（或你映射的端口）
 
+## 阿里云镜像自动构建
+
+当前阿里云构建规则为 `tags:release-v$version`，**只有推送 Git 标签才会触发构建**，普通 `git push` 到 `main` 不会构建。
+
+发布新版本流程：
+
+```bash
+# 1. 提交代码并推送到 main
+git add .
+git commit -m "your message"
+git -c http.version=HTTP/1.1 push origin main
+
+# 2. 打标签并推送（标签格式必须是 release-vX.Y.Z）
+git tag release-v1.0.1
+git -c http.version=HTTP/1.1 push origin release-v1.0.1
+```
+
+推送 `release-v1.0.1` 后，阿里云会自动构建镜像版本 `1.0.1`，对应地址：
+
+```
+registry.cn-hangzhou.aliyuncs.com/valv/copy:1.0.1
+```
+
+已发布的标签：
+
+| Git 标签 | 镜像版本 | 说明 |
+|----------|----------|------|
+| `release-v1.0.0` | `1.0.0` | 首次发布 |
+| `release-v1.0.1` | `1.0.1` | 含 docker run 文档 |
+
+> 若希望推送 `main` 分支就自动构建，需在阿里云控制台 → 构建 → 将规则改为分支 `main`，镜像版本填 `latest`。
+
+## 使用方法
 
 1. 在 PC 或软路由上启动服务
 2. 浏览器访问 `http://<服务IP>:3456`
