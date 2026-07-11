@@ -29,6 +29,37 @@ function notifyIncoming() {
   try { navigator.vibrate?.(60); } catch { /* ignore */ }
 }
 
+async function copyText(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('已复制到本机');
+  } catch {
+    toast('复制失败，请手动长按选择');
+  }
+}
+
+function renderHistory(list) {
+  const box = $('history');
+  box.innerHTML = '';
+  if (!list || !list.length) {
+    box.innerHTML = '<li class="empty">暂无历史</li>';
+    return;
+  }
+  for (const item of list) {
+    const li = document.createElement('li');
+    const span = document.createElement('span');
+    span.className = 'h-text';
+    span.textContent = item.truncated ? `${item.text}…` : item.text;
+    span.title = item.text;
+    const btn = document.createElement('button');
+    btn.className = 'link-btn';
+    btn.textContent = '复制';
+    btn.addEventListener('click', () => copyText(item.text));
+    li.append(span, btn);
+    box.append(li);
+  }
+}
+
 function applyRemote(value, ts, silent) {
   if (ts && ts < lastTs) return;
   if (ts) lastTs = ts;
@@ -82,6 +113,7 @@ async function poll() {
       return;
     }
     const data = await res.json();
+    if (data.history) renderHistory(data.history);
     if (data.ts > lastTs) applyRemote(data.text, data.ts, document.hidden);
   } catch { /* ignore */ }
 }
@@ -102,6 +134,11 @@ async function loadConfig() {
     const data = await res.json();
     needPin = Boolean(data.needPin);
     if (needPin && !pin) await askPin();
+    const lim = data.limits;
+    if (lim) {
+      $('historyHint').textContent =
+        `最近 ${lim.historyMax} 条 · 共 ${lim.historyTotalMaxKb}KB · ${lim.historyTtlHours}h 自动清理`;
+    }
   } catch { /* ignore */ }
 }
 
@@ -134,6 +171,7 @@ function connect() {
       setStatus(true, `已连接 · ${msg.count} 台设备`);
       return;
     }
+    if (msg.type === 'history') { renderHistory(msg.history); return; }
     if (msg.type === 'sync') applyRemote(msg.text, msg.ts, !msg.from);
   };
 
@@ -152,20 +190,29 @@ $('text').addEventListener('input', schedulePush);
 $('text').addEventListener('compositionend', schedulePush);
 $('text').addEventListener('paste', () => setTimeout(pushNow, 30));
 
-$('copyBtn').addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText($('text').value);
-    toast('已复制到本机');
-  } catch {
-    $('text').select();
-    toast('请长按全选后复制');
-  }
-});
+$('copyBtn').addEventListener('click', () => copyText($('text').value));
 
 $('clearBtn').addEventListener('click', () => {
   $('text').value = '';
   pushNow();
-  toast('已清空');
+  toast('已清空输入');
+});
+
+$('clearHistBtn').addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/history', {
+      method: 'DELETE',
+      headers: { 'x-pin': pin },
+    });
+    if (res.status === 401) {
+      if (await askPin()) $('clearHistBtn').click();
+      return;
+    }
+    renderHistory([]);
+    toast('历史已清空');
+  } catch {
+    toast('清空失败');
+  }
 });
 
 $('toggleQr').addEventListener('click', () => {

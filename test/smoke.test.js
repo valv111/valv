@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+process.env.HISTORY_DELAY = '100';
 const WebSocket = require('ws');
-const { server, setText, getUpdatedAt } = require('../server');
+const { server, setText } = require('../server');
 
 function connect(port) {
   return new Promise((resolve, reject) => {
@@ -50,6 +51,23 @@ async function run() {
   const pollRes = await fetch(`http://127.0.0.1:${port}/api/text`);
   const pollData = await pollRes.json();
   if (pollData.text !== 'world') throw new Error('poll failed');
+
+  // 历史：POST 更新后，防抖窗口过后应入列
+  await fetch(`http://127.0.0.1:${port}/api/text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: 'note-1' }),
+  });
+  await new Promise((r) => setTimeout(r, 300));
+  const histRes = await fetch(`http://127.0.0.1:${port}/api/text`);
+  const histData = await histRes.json();
+  if (!histData.history?.some((h) => h.text === 'note-1')) {
+    throw new Error('history failed');
+  }
+
+  const delRes = await fetch(`http://127.0.0.1:${port}/api/history`, { method: 'DELETE' });
+  const delData = await delRes.json();
+  if (delData.history?.length) throw new Error('clear history failed');
 
   a.close();
   b.close();
