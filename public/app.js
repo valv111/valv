@@ -29,13 +29,40 @@ function notifyIncoming() {
   try { navigator.vibrate?.(60); } catch { /* ignore */ }
 }
 
+function copyTextLegacy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+  document.body.append(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { /* ignore */ }
+  ta.remove();
+  return ok;
+}
+
 async function copyText(value) {
-  try {
-    await navigator.clipboard.writeText(value);
-    toast('已复制到本机');
-  } catch {
-    toast('复制失败，请手动长按选择');
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast('已复制到本机');
+      return;
+    } catch { /* HTTP 局域网下常失败，走兜底 */ }
   }
+  if (copyTextLegacy(value)) {
+    toast('已复制到本机');
+    return;
+  }
+  const main = $('text');
+  if (main?.value === value) {
+    main.focus();
+    main.select();
+    try { main.setSelectionRange(0, value.length); } catch { /* ignore */ }
+  }
+  toast('请长按全选后复制');
 }
 
 function formatSize(bytes) {
@@ -394,13 +421,8 @@ $('toggleQr').addEventListener('click', () => {
   $('toggleQr').textContent = body.hidden ? '显示二维码' : '隐藏二维码';
 });
 
-$('copyUrlBtn').addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(pageUrl || $('pageUrl').textContent);
-    toast('网址已复制');
-  } catch {
-    toast(pageUrl);
-  }
+$('copyUrlBtn').addEventListener('click', () => {
+  copyText(pageUrl || $('pageUrl').textContent);
 });
 
 document.addEventListener('visibilitychange', () => {
