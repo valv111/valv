@@ -1,6 +1,6 @@
 {
   "name": "clipbridge",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "局域网共享剪贴板与文件传输",
   "main": "server.js",
   "scripts": {

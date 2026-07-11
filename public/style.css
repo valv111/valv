@@ -159,6 +159,23 @@ button.flash { animation: flash 0.5s ease 2; }
 }
 .file-meta { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
 .files .link-btn { flex-shrink: 0; text-decoration: none; }
+.file-actions { display: flex; gap: 10px; flex-shrink: 0; align-items: center; }
+.drop-zone {
+  margin-top: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 18px 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+.drop-zone .drop-hint { font-size: 0.75rem; margin-top: 6px; }
+.drop-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(108, 140, 255, 0.08);
+  color: var(--text);
+}
 .hint { font-size: 0.8rem; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);

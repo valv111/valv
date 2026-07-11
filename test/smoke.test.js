@@ -92,6 +92,32 @@ async function run() {
   const dlRes = await fetch(`http://127.0.0.1:${port}/api/files/${upData.files[0].id}`);
   if ((await dlRes.text()) !== 'file-ok') throw new Error('file download failed');
 
+  const cnName = '新建文档.txt';
+  const cnBody = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="file"; filename="${cnName}"`,
+    'Content-Type: text/plain',
+    '',
+    'cn-ok',
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
+  const cnRes = await fetch(`http://127.0.0.1:${port}/api/files`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      'x-filename': encodeURIComponent(cnName),
+    },
+    body: cnBody,
+  });
+  const cnData = await cnRes.json();
+  if (!cnData.files?.some((f) => f.name === cnName)) throw new Error('filename encoding failed');
+
+  const fileId = cnData.files.find((f) => f.name === cnName).id;
+  const rmRes = await fetch(`http://127.0.0.1:${port}/api/files/${fileId}`, { method: 'DELETE' });
+  const rmData = await rmRes.json();
+  if (rmData.files?.some((f) => f.id === fileId)) throw new Error('file delete failed');
+
   a.close();
   b.close();
   await new Promise((r) => server.close(r));

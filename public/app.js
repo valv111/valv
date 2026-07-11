@@ -84,12 +84,20 @@ function renderFiles(list) {
     meta.className = 'file-meta';
     meta.textContent = `${formatSize(item.size)} · ${formatLeft(item.expiresAt)}后删除`;
     info.append(name, meta);
+    const actions = document.createElement('div');
+    actions.className = 'file-actions';
     const link = document.createElement('a');
     link.className = 'link-btn';
     link.href = fileUrl(item.id);
     link.download = item.name;
     link.textContent = '下载';
-    li.append(info, link);
+    const del = document.createElement('button');
+    del.className = 'link-btn';
+    del.type = 'button';
+    del.textContent = '删除';
+    del.addEventListener('click', () => deleteFile(item.id));
+    actions.append(link, del);
+    li.append(info, actions);
     box.append(li);
   }
 }
@@ -106,12 +114,14 @@ async function loadFiles() {
 async function uploadFile(file) {
   const fd = new FormData();
   fd.append('file', file, file.name);
-  $('uploadBtn').disabled = true;
-  $('uploadBtn').textContent = '上传中…';
+  setUploading(true);
   try {
     const res = await fetch('/api/files', {
       method: 'POST',
-      headers: { 'x-pin': pin },
+      headers: {
+        'x-pin': pin,
+        'x-filename': encodeURIComponent(file.name),
+      },
       body: fd,
     });
     if (res.status === 401) {
@@ -133,10 +143,45 @@ async function uploadFile(file) {
   } catch {
     toast('上传失败');
   } finally {
-    $('uploadBtn').disabled = false;
-    $('uploadBtn').textContent = '选择文件上传';
+    setUploading(false);
     $('fileInput').value = '';
   }
+}
+
+function setUploading(on) {
+  $('uploadBtn').disabled = on;
+  $('uploadBtn').textContent = on ? '上传中…' : '选择文件上传';
+  $('dropZone').classList.toggle('uploading', on);
+}
+
+async function deleteFile(id) {
+  try {
+    const res = await fetch(`/api/files/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-pin': pin },
+    });
+    if (res.status === 401) {
+      if (await askPin()) return deleteFile(id);
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      toast('删除失败');
+      return;
+    }
+    renderFiles(data.files);
+    toast('已删除');
+  } catch {
+    toast('删除失败');
+  }
+}
+
+function handleDroppedFiles(fileList) {
+  const items = [...fileList];
+  if (!items.length) return;
+  (async () => {
+    for (const file of items) await uploadFile(file);
+  })();
 }
 
 function renderHistory(list) {
@@ -307,6 +352,24 @@ $('fileInput').addEventListener('change', () => {
   const file = $('fileInput').files?.[0];
   if (file) uploadFile(file);
 });
+
+const dropZone = $('dropZone');
+['dragenter', 'dragover'].forEach((ev) => {
+  dropZone.addEventListener(ev, (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+});
+['dragleave', 'drop'].forEach((ev) => {
+  dropZone.addEventListener(ev, (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+  });
+});
+dropZone.addEventListener('drop', (e) => {
+  if (e.dataTransfer?.files?.length) handleDroppedFiles(e.dataTransfer.files);
+});
+dropZone.addEventListener('click', () => $('fileInput').click());
 
 $('clearHistBtn').addEventListener('click', async () => {
   try {

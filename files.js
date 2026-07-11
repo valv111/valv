@@ -65,6 +65,25 @@ function canAcceptUpload() {
   return { ok: true };
 }
 
+// 修复中文等非 ASCII 文件名乱码（UTF-8 被当成 latin1 解析）
+function fixFilename(raw) {
+  if (!raw) return 'file';
+  const base = path.basename(raw);
+  if (/^[\x20-\x7E]+$/.test(base)) return base;
+  const utf8 = Buffer.from(base, 'latin1').toString('utf8');
+  return utf8.includes('\uFFFD') ? base : utf8;
+}
+
+function resolveFilename(req, info) {
+  const hdr = req.get('x-filename');
+  if (hdr) {
+    try {
+      return path.basename(decodeURIComponent(hdr));
+    } catch { /* fallback */ }
+  }
+  return fixFilename(info.filename);
+}
+
 function registerRoutes(app, pinOk, broadcast) {
   app.use('/api/files', (req, res, next) => {
     if (!pinOk(req)) return res.status(401).json({ error: 'unauthorized' });
@@ -79,7 +98,11 @@ function registerRoutes(app, pinOk, broadcast) {
     const check = canAcceptUpload();
     if (!check.ok) return res.status(413).json({ error: check.error });
 
-    const bb = Busboy({ headers: req.headers, limits: { files: 1, fileSize: FILE_MAX_BYTES } });
+    const bb = Busboy({
+      headers: req.headers,
+      limits: { files: 1, fileSize: FILE_MAX_BYTES },
+      defParamCharset: 'utf8',
+    });
     let done = false;
     let gotFile = false;
 
@@ -94,7 +117,7 @@ function registerRoutes(app, pinOk, broadcast) {
     bb.on('file', (_field, stream, info) => {
       gotFile = true;
       const id = crypto.randomBytes(8).toString('hex');
-      const name = path.basename(info.filename || 'file');
+      const name = resolveFilename(req, info);
       const mime = info.mimeType || 'application/octet-stream';
       const dest = path.join(TMP_DIR, id);
       const out = fs.createWriteStream(dest);
@@ -137,6 +160,14 @@ function registerRoutes(app, pinOk, broadcast) {
     res.setHeader('Content-Type', meta.mime);
     res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(meta.name)}`);
     fs.createReadStream(filePath).pipe(res);
+  });
+
+  app.delete('/api/files/:id', (req, res) => {
+    const meta = files.find((f) => f.id === req.params.id);
+    if (!meta) return res.status(404).json({ error: 'not_found' });
+    removeFile(req.params.id);
+    broadcast({ type: 'files', files: fileList() });
+    res.json({ ok: true, files: fileList() });
   });
 }
 
