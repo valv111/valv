@@ -555,9 +555,17 @@
       return LS.get('clipbridge_pins', {});
     }
 
+    const urlRoom = params.get('room');
+    const lastRoom = LS.get('clipbridge_room', '');
+
+    // 仅扫码/链接带 ?room= 时自动加入；直接打开首页不自动连上次房间
+    let room = urlRoom || '';
+    let pin = room ? getPinForRoom(room) : '';
+
     function getPinForRoom(r) {
+      if (!r) return '';
       const fromUrl = params.get('pin');
-      if (fromUrl !== null) return fromUrl.trim();
+      if (fromUrl !== null && urlRoom === r) return fromUrl.trim();
       return getStoredPins()[r] || '';
     }
 
@@ -568,9 +576,6 @@
       else delete pins[r];
       LS.set('clipbridge_pins', pins);
     }
-
-    let room = params.get('room') || LS.get('clipbridge_room', '');
-    let pin = getPinForRoom(room);
     let ws = null;
     let localEdit = false;
     let debounceTimer = null;
@@ -583,8 +588,8 @@
     let setPinOnJoin = false;
     let haltReconnect = false;
 
-    $('roomInput').value = room;
-    $('pinInput').value = pin;
+    $('roomInput').value = room || lastRoom;
+    $('pinInput').value = pin || (lastRoom ? getPinForRoom(lastRoom) : '');
     $('autoCopy').checked = LS.get('clipbridge_autoCopy', true);
     $('autoPaste').checked = LS.get('clipbridge_autoPaste', false);
 
@@ -1055,7 +1060,7 @@
       loadRoomList();
       setInterval(loadRoomList, 5000);
 
-      if (!room) {
+      if (!urlRoom) {
         showApp();
         loadQr();
         setStatus('', '请选择或创建房间');
