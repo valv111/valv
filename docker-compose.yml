@@ -1,0 +1,17 @@
+services:
+  clipbridge:
+    build: .
+    container_name: clipbridge
+    ports:
+      - "${PORT:-3456}:3456"
+    volumes:
+      - clipbridge-data:/app/.data
+    environment:
+      - PORT=3456
+      - HOST=0.0.0.0
+      - ROOM_START=${ROOM_START:-1}
+      - DATA_DIR=/app/.data
+    restart: unless-stopped
+
+volumes:
+  clipbridge-data:

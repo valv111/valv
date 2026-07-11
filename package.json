@@ -1,0 +1,21 @@
+{
+  "name": "clipbridge",
+  "version": "1.0.0",
+  "description": "iOS 与 PC 之间跨设备剪贴板同步工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}

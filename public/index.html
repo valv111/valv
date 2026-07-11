@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#6c8cff">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <title>ClipBridge</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242836;
+      --border: #2e3345;
+      --text: #e8eaf0;
+      --muted: #8b90a0;
+      --accent: #6c8cff;
+      --accent-hover: #8aa4ff;
+      --success: #4ade80;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --radius: 14px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      line-height: 1.5;
+    }
+
+    .app {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: calc(16px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .status-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 6px 12px;
+      background: var(--surface);
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warn);
+      flex-shrink: 0;
+    }
+
+    .dot.online { background: var(--success); }
+    .dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    @media (min-width: 768px) {
+      .grid { grid-template-columns: 1fr 280px; align-items: start; }
+      .mobile-only { display: none !important; }
+    }
+
+    @media (max-width: 767px) {
+      .desktop-only { display: none !important; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .textarea-wrap {
+      position: relative;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface2);
+      color: var(--text);
+      padding: 14px;
+      padding-bottom: 28px;
+      font-size: 16px;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+
+    @media (min-width: 768px) {
+      textarea { min-height: 280px; }
+    }
+
+    .char-count {
+      position: absolute;
+      right: 12px;
+      bottom: 10px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .char-count.warn { color: var(--warn); }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s, border-color 0.15s;
+      min-height: 44px;
+    }
+
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) { border-color: var(--accent); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      min-height: 36px;
+    }
+
+    .hint {
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .room-row, .pin-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .room-row input, .pin-row input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      outline: none;
+      min-width: 0;
+    }
+
+    .room-row input:focus, .pin-row input:focus { border-color: var(--accent); }
+
+    .room-row button, .pin-row button {
+      padding: 10px 14px;
+      min-height: auto;
+      white-space: nowrap;
+    }
+
+    .qr-wrap { text-align: center; }
+
+    .qr-wrap img {
+      width: 100%;
+      max-width: 240px;
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .url-box {
+      margin-top: 12px;
+      word-break: break-all;
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .ip-list {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .history-item:hover { border-color: var(--accent); }
+
+    .history-item .preview {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .history-item .time {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: calc(20px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      max-width: calc(100vw - 32px);
+      text-align: center;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .room-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .room-item:hover, .room-item.active { border-color: var(--accent); }
+
+    .room-item .room-id {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .room-item .room-meta {
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .room-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .deploy-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    .empty-history {
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .pin-gate {
+      min-height: 60dvh;
+      display: grid;
+      place-items: center;
+    }
+
+    .pin-gate .card { width: 100%; max-width: 360px; }
+
+    .error-text {
+      color: var(--danger);
+      font-size: 0.82rem;
+      margin-top: 8px;
+      min-height: 1.2em;
+    }
+
+    label.check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app" hidden>
+    <header>
+      <div class="logo">
+        <div class="logo-icon">📋</div>
+        <span>ClipBridge</span>
+      </div>
+      <div class="status-group">
+        <div class="badge">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">连接中…</span>
+        </div>
+        <div class="badge" id="peerBadge" hidden>
+          <span id="peerText">1 台设备</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main>
+        <div class="card">
+          <div class="card-title">房间</div>
+          <p class="hint" style="margin-top:0;margin-bottom:12px;">
+            创建房间获得编号（1、2、3…），手机扫码或输入同一房间号即可同步。
+          </p>
+          <div class="room-row">
+            <input id="roomInput" placeholder="房间号，如 1" inputmode="numeric" maxlength="8" autocomplete="off">
+            <button class="btn-primary" id="createRoomBtn">创建</button>
+            <button class="btn-secondary" id="joinBtn">加入</button>
+          </div>
+          <div class="pin-row">
+            <input id="pinInput" placeholder="房间密码（可选，首次创建时可设置）" maxlength="16" type="password" autocomplete="off">
+            <button class="btn-ghost" id="togglePinBtn" type="button">显示</button>
+          </div>
+          <p class="deploy-hint desktop-only">
+            部署方式：软路由 / PC 常驻运行均可。Docker：<code>docker compose up -d</code> · 进程：<code>./start.sh</code>
+          </p>
+
+          <div class="card qr-card" id="qrCard" hidden style="margin-top:16px;padding:0;border:none;background:transparent;">
+            <div class="card" style="margin:0;">
+              <div class="card-title">扫码进入房间 <span id="qrRoomLabel" style="color:var(--accent);">#1</span></div>
+              <div class="qr-wrap">
+                <img id="qrImg" alt="房间二维码" src="" hidden>
+                <p id="qrLoading" style="color:var(--muted);font-size:0.85rem;">生成二维码…</p>
+              </div>
+              <div class="url-box" id="shareUrl">—</div>
+              <div class="ip-list" id="ipList"></div>
+              <div class="actions" style="margin-top:10px;">
+                <button class="btn-secondary" id="copyLinkBtn" style="flex:1;">复制连接地址</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-title" style="margin-top:16px;">剪贴板内容</div>
+          <div class="textarea-wrap">
+            <textarea id="clipText" placeholder="在此输入或粘贴文字，另一端会实时同步…" spellcheck="false"></textarea>
+            <span class="char-count" id="charCount">0 字</span>
+          </div>
+
+          <div class="actions">
+            <button class="btn-primary" id="copyBtn">复制到本机</button>
+            <button class="btn-secondary" id="pasteBtn">从本机粘贴</button>
+            <button class="btn-secondary" id="sendBtn">发送并同步</button>
+            <button class="btn-secondary" id="clearBtn">清空</button>
+          </div>
+
+          <p class="hint mobile-only">
+            iOS：可「添加到主屏幕」当 App 用；输入自动同步，点「复制到本机」写入剪贴板。
+          </p>
+          <p class="hint desktop-only">
+            快捷键：Ctrl+Shift+C 复制 · Ctrl+Shift+V 粘贴 · Ctrl+Enter 发送同步
+          </p>
+          <label class="check desktop-only">
+            <input type="checkbox" id="autoCopy">
+            收到对方内容时自动复制到 PC 剪贴板
+          </label>
+          <label class="check desktop-only">
+            <input type="checkbox" id="autoPaste">
+            页面聚焦时自动读取 PC 剪贴板（实验性）
+          </label>
+        </div>
+
+        <div class="card mobile-only" style="margin-top:16px;">
+          <div class="card-title">活跃房间</div>
+          <div class="room-list" id="roomListMobile">
+            <div class="empty-history">暂无房间</div>
+          </div>
+        </div>
+      </main>
+
+      <aside>
+        <div class="card desktop-only" style="margin-bottom:16px;">
+          <div class="card-title">活跃房间</div>
+          <div class="room-list" id="roomList">
+            <div class="empty-history">暂无房间，请先创建</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">历史记录</div>
+          <div class="history-list" id="historyList">
+            <div class="empty-history">暂无历史</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="app pin-gate" id="pinGate" hidden>
+    <div class="card">
+      <div class="card-title">需要房间密码</div>
+      <p class="hint" style="margin-top:0;margin-bottom:12px;">该房间已设置密码，请输入后继续。</p>
+      <div class="pin-row" style="margin-bottom:0;">
+        <input id="gatePinInput" placeholder="房间密码" maxlength="16" type="password" autocomplete="off">
+        <button class="btn-primary" id="gateJoinBtn">进入</button>
+      </div>
+      <p class="error-text" id="gateError"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const LS = {
+      get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+      set(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
+    };
+
+    const params = new URLSearchParams(location.search);
+    const clientId = LS.get('clipbridge_clientId', null) || crypto.randomUUID();
+    LS.set('clipbridge_clientId', clientId);
+
+    function getStoredPins() {
+      return LS.get('clipbridge_pins', {});
+    }
+
+    function getPinForRoom(r) {
+      const fromUrl = params.get('pin');
+      if (fromUrl !== null) return fromUrl.trim();
+      return getStoredPins()[r] || '';
+    }
+
+    function savePinForRoom(r, p) {
+      const pins = getStoredPins();
+      const normalized = (p || '').trim();
+      if (normalized) pins[r] = normalized;
+      else delete pins[r];
+      LS.set('clipbridge_pins', pins);
+    }
+
+    let room = params.get('room') || LS.get('clipbridge_room', '');
+    let pin = getPinForRoom(room);
+    let ws = null;
+    let localEdit = false;
+    let debounceTimer = null;
+    let reconnectTimer = null;
+    let reconnectAttempt = 0;
+    let historyCache = [];
+    let lastPeerText = '';
+    let maxBytes = 512 * 1024;
+    let joined = false;
+    let setPinOnJoin = false;
+    let haltReconnect = false;
+
+    $('roomInput').value = room;
+    $('pinInput').value = pin;
+    $('autoCopy').checked = LS.get('clipbridge_autoCopy', true);
+    $('autoPaste').checked = LS.get('clipbridge_autoPaste', false);
+
+    function toast(msg) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function setStatus(mode, text) {
+      const dot = $('statusDot');
+      dot.classList.remove('online', 'syncing');
+      if (mode === 'online') dot.classList.add('online');
+      if (mode === 'syncing') dot.classList.add('syncing');
+      $('statusText').textContent = text;
+    }
+
+    function setPeers(n) {
+      const badge = $('peerBadge');
+      if (n > 0) {
+        badge.hidden = false;
+        $('peerText').textContent = `${n} 台设备在线`;
+      } else {
+        badge.hidden = true;
+      }
+    }
+
+    function updateCharCount() {
+      const text = $('clipText').value;
+      const bytes = new TextEncoder().encode(text).length;
+      const el = $('charCount');
+      const kb = (bytes / 1024).toFixed(bytes > 10240 ? 0 : 1);
+      el.textContent = `${text.length} 字 · ${kb} KB`;
+      el.classList.toggle('warn', bytes > maxBytes * 0.85);
+    }
+
+    function buildShareUrl() {
+      const qs = new URLSearchParams({ room });
+      if (pin) qs.set('pin', pin);
+      return `${location.origin}/?${qs}`;
+    }
+
+    function persistPrefs() {
+      LS.set('clipbridge_room', room);
+      savePinForRoom(room, pin);
+      LS.set('clipbridge_autoCopy', $('autoCopy').checked);
+      LS.set('clipbridge_autoPaste', $('autoPaste').checked);
+    }
+
+    function showApp() {
+      $('pinGate').hidden = true;
+      $('app').hidden = false;
+      haltReconnect = false;
+    }
+
+    function showPinGate(msg, keepInput = false) {
+      $('app').hidden = true;
+      $('pinGate').hidden = false;
+      $('gateError').textContent = msg || '';
+      if (!keepInput || !$('gatePinInput').value) {
+        $('gatePinInput').value = pin;
+      }
+      $('gatePinInput').focus();
+      haltReconnect = true;
+      clearTimeout(reconnectTimer);
+      setStatus('', '等待输入密码');
+      setPeers(0);
+    }
+
+    function closeWs(skipReconnect = false) {
+      if (!ws) return;
+      if (skipReconnect) ws.onclose = null;
+      ws.close();
+      ws = null;
+    }
+
+    function wsUrl() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      return `${proto}://${location.host}`;
+    }
+
+    function connect() {
+      closeWs(true);
+      clearTimeout(reconnectTimer);
+
+      setStatus('', '连接中…');
+      ws = new WebSocket(wsUrl());
+
+      ws.onopen = () => {
+        reconnectAttempt = 0;
+        ws.send(JSON.stringify({
+          type: 'join',
+          room,
+          pin: pin.trim(),
+          clientId,
+          setPin: setPinOnJoin && pin.trim() ? pin.trim() : undefined,
+        }));
+        setPinOnJoin = false;
+      };
+
+      ws.onmessage = (e) => {
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+
+        if (msg.type === 'error') {
+          if (msg.code === 'invalid_pin') {
+            joined = false;
+            const hadPin = Boolean(pin.trim());
+            showPinGate(hadPin ? '密码错误，请重试' : '该房间已设置密码，请输入', true);
+            closeWs(true);
+          }
+          return;
+        }
+
+        if (msg.type === 'peers') {
+          setPeers(msg.peers);
+          loadRoomList();
+          return;
+        }
+
+        if (msg.type === 'sync') {
+          joined = true;
+          haltReconnect = false;
+          showApp();
+          if (msg.room) room = msg.room;
+          $('roomInput').value = room;
+          $('pinInput').value = pin;
+          persistPrefs();
+          setStatus('online', `已连接 · ${room}`);
+          if (typeof msg.peers === 'number') setPeers(msg.peers);
+
+          historyCache = msg.history || [];
+          renderHistory(historyCache);
+
+          if (!localEdit && msg.text !== $('clipText').value) {
+            $('clipText').value = msg.text;
+            updateCharCount();
+            if (msg.from === 'peer' && msg.clientId !== clientId) {
+              if ($('autoCopy')?.checked) {
+                copyToLocal(msg.text, true);
+              } else if (msg.text !== lastPeerText) {
+                toast('收到新内容');
+              }
+              lastPeerText = msg.text;
+            }
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        joined = false;
+        if (haltReconnect) return;
+        setStatus('', '已断开，重连中…');
+        setPeers(0);
+        const delay = Math.min(1000 * 2 ** reconnectAttempt, 15000);
+        reconnectAttempt += 1;
+        reconnectTimer = setTimeout(connect, delay);
+      };
+
+      ws.onerror = () => closeWs(false);
+    }
+
+    function sendUpdate(text) {
+      setStatus('syncing', '同步中…');
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'update', text }));
+      }
+      setTimeout(() => {
+        if (ws?.readyState === WebSocket.OPEN) {
+          setStatus('online', `已连接 · ${room}`);
+        }
+      }, 300);
+    }
+
+    function renderHistory(items) {
+      const list = $('historyList');
+      if (!items.length) {
+        list.innerHTML = '<div class="empty-history">暂无历史</div>';
+        return;
+      }
+
+      list.innerHTML = items.map((item, i) => {
+        const preview = escapeHtml(item.text).replace(/\n/g, ' ');
+        const time = new Date(item.at).toLocaleString('zh-CN', { hour12: false });
+        return `<div class="history-item" data-idx="${i}">
+          <div class="preview">${preview || '(空)'}</div>
+          <div class="time">${time}</div>
+        </div>`;
+      }).join('');
+
+      list.querySelectorAll('.history-item').forEach((el) => {
+        el.addEventListener('click', () => {
+          const item = historyCache[Number(el.dataset.idx)];
+          if (!item) return;
+          $('clipText').value = item.text;
+          updateCharCount();
+          pushLocal(item.text);
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function pushLocal(text) {
+      localEdit = true;
+      sendUpdate(text);
+      setTimeout(() => { localEdit = false; }, 400);
+    }
+
+    $('clipText').addEventListener('input', (e) => {
+      updateCharCount();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => pushLocal(e.target.value), 250);
+    });
+
+    async function copyToLocal(text, silent) {
+      const content = text ?? $('clipText').value;
+      if (!content) {
+        if (!silent) toast('内容为空');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(content);
+        if (!silent) toast('已复制到本机剪贴板');
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = content;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (!silent) toast('已复制到本机剪贴板');
+      }
+    }
+
+    async function pasteFromLocal(silent) {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text) {
+          if (!silent) toast('剪贴板为空');
+          return;
+        }
+        $('clipText').value = text;
+        updateCharCount();
+        pushLocal(text);
+        if (!silent) toast('已从本机剪贴板粘贴');
+      } catch {
+        if (!silent) toast('无法读取剪贴板，请手动粘贴');
+      }
+    }
+
+    $('copyBtn').addEventListener('click', () => copyToLocal());
+    $('pasteBtn').addEventListener('click', () => pasteFromLocal());
+    $('sendBtn').addEventListener('click', () => pushLocal($('clipText').value));
+    $('clearBtn').addEventListener('click', () => {
+      $('clipText').value = '';
+      updateCharCount();
+      pushLocal('');
+    });
+
+    async function createRoom() {
+      try {
+        const res = await fetch('/api/rooms/create', { method: 'POST' });
+        const data = await res.json();
+        if (!data.room) throw new Error('create failed');
+        applyRoom(data.room, $('pinInput').value.trim(), true);
+        toast(`已创建房间 ${data.room}，可扫码加入`);
+      } catch {
+        toast('创建房间失败');
+      }
+    }
+
+    function renderRoomListItems(items) {
+      if (!items.length) {
+        return '<div class="empty-history">暂无房间，请先创建</div>';
+      }
+      return items.map((r) => {
+        const active = r.id === room ? ' active' : '';
+        const lock = r.hasPin ? ' 🔒' : '';
+        const peers = r.peers > 0 ? `${r.peers} 台在线` : '空闲';
+        return `<div class="room-item${active}" data-room="${escapeAttr(r.id)}">
+          <span class="room-id">#${escapeHtml(r.id)}${lock}</span>
+          <span class="room-meta">${peers}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function bindRoomListClicks(container) {
+      container.querySelectorAll('.room-item').forEach((el) => {
+        el.addEventListener('click', () => {
+          const id = el.dataset.room;
+          $('roomInput').value = id;
+          applyRoom(id, getPinForRoom(id), false);
+        });
+      });
+    }
+
+    async function loadRoomList() {
+      const lists = [$('roomList'), $('roomListMobile')].filter(Boolean);
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        const items = data.rooms || [];
+        const html = renderRoomListItems(items);
+        for (const list of lists) {
+          list.innerHTML = html;
+          bindRoomListClicks(list);
+        }
+      } catch {
+        const err = '<div class="empty-history">加载失败</div>';
+        for (const list of lists) {
+          list.innerHTML = err;
+        }
+      }
+    }
+
+    function applyRoom(newRoom, newPin, allowSetPin = false) {
+      const trimmed = newRoom.trim().slice(0, 32);
+      if (!trimmed) {
+        toast('请输入房间号或先创建房间');
+        return;
+      }
+      room = trimmed;
+      pin = (newPin ?? getPinForRoom(room)).trim();
+      setPinOnJoin = allowSetPin && Boolean(pin);
+      haltReconnect = false;
+      reconnectAttempt = 0;
+      $('roomInput').value = room;
+      $('pinInput').value = pin;
+      history.replaceState(null, '', buildShareUrl().replace(location.origin, ''));
+      persistPrefs();
+      connect();
+      loadQr();
+      loadRoomList();
+    }
+
+    $('createRoomBtn').addEventListener('click', createRoom);
+
+    $('joinBtn').addEventListener('click', () => {
+      const newRoom = $('roomInput').value.trim();
+      if (!newRoom) {
+        toast('请输入房间号或先创建房间');
+        return;
+      }
+      const newPin = $('pinInput').value.trim();
+      applyRoom(newRoom, newPin, Boolean(newPin));
+    });
+
+    $('gateJoinBtn').addEventListener('click', () => {
+      pin = $('gatePinInput').value.trim();
+      if (!pin) {
+        $('gateError').textContent = '请输入密码';
+        return;
+      }
+      $('pinInput').value = pin;
+      persistPrefs();
+      haltReconnect = false;
+      reconnectAttempt = 0;
+      connect();
+    });
+
+    $('gatePinInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $('gateJoinBtn').click();
+    });
+
+    $('togglePinBtn').addEventListener('click', () => {
+      const input = $('pinInput');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      $('togglePinBtn').textContent = show ? '隐藏' : '显示';
+    });
+
+    $('autoCopy').addEventListener('change', persistPrefs);
+    $('autoPaste').addEventListener('change', persistPrefs);
+
+    async function copyShareLink() {
+      const url = buildShareUrl();
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('连接地址已复制');
+      } catch {
+        toast(url);
+      }
+    }
+
+    $('copyLinkBtn').addEventListener('click', copyShareLink);
+
+    async function loadQr() {
+      const img = $('qrImg');
+      const loading = $('qrLoading');
+      const card = $('qrCard');
+      if (!room) {
+        if (card) card.hidden = true;
+        if (img) img.hidden = true;
+        if (loading) loading.textContent = '请先创建或加入房间';
+        if ($('shareUrl')) $('shareUrl').textContent = '—';
+        return;
+      }
+      if (card) card.hidden = false;
+      if ($('qrRoomLabel')) $('qrRoomLabel').textContent = `#${room}`;
+      const qs = new URLSearchParams({ room });
+      if (pin) qs.set('pin', pin);
+      try {
+        const [qrRes, infoRes] = await Promise.all([
+          fetch(`/api/qr?${qs}`),
+          fetch('/api/info'),
+        ]);
+        const data = await qrRes.json();
+        const info = await infoRes.json();
+        maxBytes = info.maxTextBytes || maxBytes;
+        img.src = data.qr;
+        img.hidden = false;
+        loading.hidden = true;
+        const url = buildShareUrl();
+        $('shareUrl').textContent = url;
+        $('ipList').textContent = (info.ips || []).map((ip) => `备选：http://${ip}:${info.port}/?room=${encodeURIComponent(room)}`).join(' · ');
+        updateCharCount();
+      } catch {
+        loading.textContent = '二维码加载失败';
+        loading.hidden = false;
+      }
+    }
+
+    document.addEventListener('paste', (e) => {
+      const text = e.clipboardData?.getData('text');
+      if (text) {
+        $('clipText').value = text;
+        updateCharCount();
+        pushLocal(text);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+        e.preventDefault();
+        copyToLocal();
+      }
+      if (mod && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+        e.preventDefault();
+        pasteFromLocal();
+      }
+      if (mod && e.key === 'Enter') {
+        e.preventDefault();
+        pushLocal($('clipText').value);
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (!haltReconnect && (!ws || ws.readyState !== WebSocket.OPEN)) connect();
+        if ($('autoPaste')?.checked) pasteFromLocal(true);
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if ($('autoPaste')?.checked) pasteFromLocal(true);
+    });
+
+    async function init() {
+      updateCharCount();
+      loadRoomList();
+      setInterval(loadRoomList, 5000);
+
+      if (!room) {
+        showApp();
+        loadQr();
+        setStatus('', '请选择或创建房间');
+        return;
+      }
+
+      loadQr();
+
+      try {
+        const metaRes = await fetch(`/api/room/${encodeURIComponent(room)}/meta`);
+        if (metaRes.status === 404) {
+          showApp();
+          setStatus('', '房间不存在，请重新创建或加入');
+          return;
+        }
+        const meta = await metaRes.json();
+        if (meta.hasPin && !pin.trim()) {
+          showPinGate('该房间已设置密码，请输入');
+          return;
+        }
+      } catch {
+        // 网络异常时仍尝试连接
+      }
+
+      connect();
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    init();
+  </script>
+</body>
+</html>
