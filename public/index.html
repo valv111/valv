@@ -37,6 +37,15 @@
 
     <div class="card">
       <div class="qr-head">
+        <p class="hint" id="fileHint">文件传输 · 照片/文档 · 流式落盘不占内存</p>
+      </div>
+      <input type="file" id="fileInput" hidden>
+      <button id="uploadBtn" type="button">选择文件上传</button>
+      <ul class="files" id="files"></ul>
+    </div>
+
+    <div class="card">
+      <div class="qr-head">
         <p class="hint" id="historyHint">最近 10 条（点「复制」写入本机剪贴板）</p>
         <button class="link-btn" id="clearHistBtn" type="button">清空历史</button>
       </div>

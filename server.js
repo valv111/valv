@@ -4,6 +4,7 @@ const os = require('os');
 const path = require('path');
 const QRCode = require('qrcode');
 const { WebSocketServer } = require('ws');
+const files = require('./files');
 
 const PORT = Number(process.env.PORT) || 3456;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -129,6 +130,7 @@ app.get('/api/config', (_req, res) => {
       historyMax: HISTORY_MAX,
       historyTotalMaxKb: Math.round(HISTORY_TOTAL_MAX_BYTES / 1024),
       historyTtlHours: Math.round(HISTORY_TTL_MS / 3600000),
+      ...files.limits,
     },
   });
 });
@@ -159,6 +161,9 @@ app.delete('/api/history', (_req, res) => {
   res.json({ ok: true, history });
 });
 
+files.registerRoutes(app, pinOk, broadcast);
+files.initFiles();
+
 app.get('/api/qr', async (req, res) => {
   const host = req.get('host');
   const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
@@ -184,6 +189,7 @@ wss.on('connection', (ws, req) => {
   clients.add(ws);
   ws.send(JSON.stringify(snapshot()));
   ws.send(JSON.stringify({ type: 'history', history }));
+  ws.send(JSON.stringify({ type: 'files', files: files.fileList() }));
   broadcastPeers();
 
   ws.on('message', (raw) => {
@@ -218,6 +224,8 @@ setInterval(() => {
   if (purgeExpiredHistory()) broadcast({ type: 'history', history });
 }, 10 * 60 * 1000);
 
+files.startCleanup(broadcast);
+
 if (require.main === module) {
   server.listen(PORT, HOST, () => {
     console.log(`ClipBridge  http://localhost:${PORT}`);
@@ -235,4 +243,6 @@ module.exports = {
   getUpdatedAt: () => updatedAt,
   getHistory: () => history,
   clearHistory,
+  clearAllFiles: files.clearAllFiles,
+  fileList: files.fileList,
 };

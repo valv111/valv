@@ -38,6 +38,107 @@ async function copyText(value) {
   }
 }
 
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatLeft(expiresAt) {
+  const sec = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+  const min = Math.floor(sec / 60);
+  const s = sec % 60;
+  return min > 0 ? `${min}分${s}秒` : `${s}秒`;
+}
+
+function isImage(mime) {
+  return typeof mime === 'string' && mime.startsWith('image/');
+}
+
+function fileUrl(id) {
+  return withPin(`/api/files/${id}`);
+}
+
+function renderFiles(list) {
+  const box = $('files');
+  box.innerHTML = '';
+  if (!list || !list.length) {
+    box.innerHTML = '<li class="empty">暂无文件，点上方按钮上传</li>';
+    return;
+  }
+  for (const item of list) {
+    const li = document.createElement('li');
+    if (isImage(item.mime)) {
+      const img = document.createElement('img');
+      img.className = 'file-thumb';
+      img.src = fileUrl(item.id);
+      img.alt = item.name;
+      li.append(img);
+    }
+    const info = document.createElement('div');
+    info.className = 'file-info';
+    const name = document.createElement('div');
+    name.className = 'file-name';
+    name.textContent = item.name;
+    const meta = document.createElement('div');
+    meta.className = 'file-meta';
+    meta.textContent = `${formatSize(item.size)} · ${formatLeft(item.expiresAt)}后删除`;
+    info.append(name, meta);
+    const link = document.createElement('a');
+    link.className = 'link-btn';
+    link.href = fileUrl(item.id);
+    link.download = item.name;
+    link.textContent = '下载';
+    li.append(info, link);
+    box.append(li);
+  }
+}
+
+async function loadFiles() {
+  try {
+    const res = await fetch('/api/files', { headers: { 'x-pin': pin } });
+    if (res.status === 401) return;
+    const data = await res.json();
+    renderFiles(data.files);
+  } catch { /* ignore */ }
+}
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  $('uploadBtn').disabled = true;
+  $('uploadBtn').textContent = '上传中…';
+  try {
+    const res = await fetch('/api/files', {
+      method: 'POST',
+      headers: { 'x-pin': pin },
+      body: fd,
+    });
+    if (res.status === 401) {
+      if (await askPin()) return uploadFile(file);
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      const err = data.error === 'file_too_large' ? '文件超过 200MB'
+        : data.error === 'too_many_files' ? '文件数量已满（最多 10 个）'
+        : data.error === 'quota_exceeded' ? '总容量已满（500MB）'
+        : '上传失败';
+      toast(err);
+      return;
+    }
+    renderFiles(data.files);
+    toast('上传成功');
+    try { navigator.vibrate?.(60); } catch { /* ignore */ }
+  } catch {
+    toast('上传失败');
+  } finally {
+    $('uploadBtn').disabled = false;
+    $('uploadBtn').textContent = '选择文件上传';
+    $('fileInput').value = '';
+  }
+}
+
 function renderHistory(list) {
   const box = $('history');
   box.innerHTML = '';
@@ -138,6 +239,8 @@ async function loadConfig() {
     if (lim) {
       $('historyHint').textContent =
         `最近 ${lim.historyMax} 条 · 共 ${lim.historyTotalMaxKb}KB · ${lim.historyTtlHours}h 自动清理`;
+      $('fileHint').textContent =
+        `单文件 ${lim.fileMaxMb}MB · 最多 ${lim.fileMaxCount} 个 · 共 ${lim.fileTotalMaxMb}MB · <50MB 保留 ${lim.fileTtlSmallMin} 分钟 · ≥50MB 保留 ${lim.fileTtlLargeMin} 分钟`;
     }
   } catch { /* ignore */ }
 }
@@ -172,6 +275,7 @@ function connect() {
       return;
     }
     if (msg.type === 'history') { renderHistory(msg.history); return; }
+    if (msg.type === 'files') { renderFiles(msg.files); return; }
     if (msg.type === 'sync') applyRemote(msg.text, msg.ts, !msg.from);
   };
 
@@ -196,6 +300,12 @@ $('clearBtn').addEventListener('click', () => {
   $('text').value = '';
   pushNow();
   toast('已清空输入');
+});
+
+$('uploadBtn').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', () => {
+  const file = $('fileInput').files?.[0];
+  if (file) uploadFile(file);
 });
 
 $('clearHistBtn').addEventListener('click', async () => {
@@ -233,6 +343,7 @@ $('copyUrlBtn').addEventListener('click', async () => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     poll();
+    loadFiles();
     if (!ws || ws.readyState !== WebSocket.OPEN) connect();
   }
 });
@@ -246,6 +357,7 @@ if (!window.matchMedia('(pointer: coarse)').matches) {
 (async () => {
   await loadConfig();
   loadQr();
+  loadFiles();
   connect();
   poll();
 })();

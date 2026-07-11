@@ -69,6 +69,29 @@ async function run() {
   const delData = await delRes.json();
   if (delData.history?.length) throw new Error('clear history failed');
 
+  const boundary = 'clipbridge-test';
+  const body = [
+    `--${boundary}`,
+    'Content-Disposition: form-data; name="file"; filename="test.txt"',
+    'Content-Type: text/plain',
+    '',
+    'file-ok',
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
+  const upRes = await fetch(`http://127.0.0.1:${port}/api/files`, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+    body,
+  });
+  const upData = await upRes.json();
+  if (!upRes.ok || !upData.files?.some((f) => f.name === 'test.txt')) {
+    throw new Error('file upload failed');
+  }
+
+  const dlRes = await fetch(`http://127.0.0.1:${port}/api/files/${upData.files[0].id}`);
+  if ((await dlRes.text()) !== 'file-ok') throw new Error('file download failed');
+
   a.close();
   b.close();
   await new Promise((r) => server.close(r));

@@ -131,6 +131,34 @@ button.flash { animation: flash 0.5s ease 2; }
 }
 .history .link-btn { flex-shrink: 0; }
 .history .empty { justify-content: center; color: var(--muted); font-size: 0.8rem; }
+.files { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.files li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #242836;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.files .empty { justify-content: center; color: var(--muted); font-size: 0.8rem; }
+.file-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: #1a1d27;
+}
+.file-info { flex: 1; min-width: 0; }
+.file-name {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-meta { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+.files .link-btn { flex-shrink: 0; text-decoration: none; }
 .hint { font-size: 0.8rem; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
