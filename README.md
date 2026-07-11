@@ -69,7 +69,68 @@ docker compose logs -f
 docker compose down
 ```
 
-## 使用方法
+### 方式三：docker run 直接启动
+
+本地构建后运行：
+
+```bash
+docker build -t clipbridge .
+docker run -d \
+  --name clipbridge \
+  --restart unless-stopped \
+  -p 3456:3456 \
+  -v clipbridge-data:/app/.data \
+  -e ROOM_START=1 \
+  clipbridge
+```
+
+使用阿里云镜像（需先登录）：
+
+```bash
+docker login --username=你的用户名 registry.cn-hangzhou.aliyuncs.com
+
+docker run -d \
+  --name clipbridge \
+  --restart unless-stopped \
+  -p 3456:3456 \
+  -v clipbridge-data:/app/.data \
+  -e ROOM_START=1 \
+  registry.cn-hangzhou.aliyuncs.com/valv/copy:1.0.0
+```
+
+常用管理命令：
+
+```bash
+# 查看日志
+docker logs -f clipbridge
+
+# 停止
+docker stop clipbridge
+
+# 删除容器（数据在 volume 里不会丢）
+docker rm clipbridge
+
+# 更新镜像后重启
+docker pull registry.cn-hangzhou.aliyuncs.com/valv/copy:1.0.0
+docker stop clipbridge && docker rm clipbridge
+docker run -d --name clipbridge --restart unless-stopped \
+  -p 3456:3456 -v clipbridge-data:/app/.data \
+  registry.cn-hangzhou.aliyuncs.com/valv/copy:1.0.0
+```
+
+自定义端口示例（映射到 8080）：
+
+```bash
+docker run -d \
+  --name clipbridge \
+  --restart unless-stopped \
+  -p 8080:3456 \
+  -v clipbridge-data:/app/.data \
+  registry.cn-hangzhou.aliyuncs.com/valv/copy:1.0.0
+```
+
+访问地址：`http://<主机IP>:3456`（或你映射的端口）
+
 
 1. 在 PC 或软路由上启动服务
 2. 浏览器访问 `http://<服务IP>:3456`
