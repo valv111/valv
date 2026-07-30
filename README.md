@@ -107,7 +107,7 @@ docker run -d --name clipbridge --restart unless-stopped \
 ```bash
 docker run -d --name clipbridge --restart unless-stopped \
   -p 3456:3456 \
-  registry.cn-hangzhou.aliyuncs.com/valv/copy:latest
+  registry.cn-hangzhou.aliyuncs.com/valv/copy:1.3.2
 ```
 
 改端口 / 加密码（容器内固定 3456）：
